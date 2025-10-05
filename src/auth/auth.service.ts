@@ -10,6 +10,8 @@ import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../roles/entities/role.entity';
+import {UserResponseDto} from "../users/dto/user-response.dto";
+import {plainToInstance} from "class-transformer";
 
 @Injectable()
 export class AuthService {
@@ -82,13 +84,15 @@ export class AuthService {
     };
   }
 
-  async validateUser(payload: any): Promise<User> {
+  async validateUser(payload: any): Promise<UserResponseDto> {
     const user = await this.userRepository.findOne({
       where: { id: payload.id },
     });
     if (!user) {
       throw new UnauthorizedException('User not found');
     }
-    return user;
+    return plainToInstance(UserResponseDto, user, {
+      excludeExtraneousValues: true
+    });
   }
 }

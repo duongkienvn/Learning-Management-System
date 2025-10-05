@@ -7,6 +7,7 @@ import { UsersModule } from './users/users.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { RolesModule } from './roles/roles.module';
 import { LessonsModule } from './lessons/lessons.module';
+import {ConfigModule} from "@nestjs/config";
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { LessonsModule } from './lessons/lessons.module';
       synchronize: true,
     }),
     LessonsModule,
+    ConfigModule.forRoot(),
   ],
   controllers: [AppController],
   providers: [AppService],

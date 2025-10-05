@@ -4,39 +4,68 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
-  Post,
+  Post, Put, UseGuards,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
+import { CourseResponseDto } from './dto/course-response.dto';
+import {LessonResponseDto} from "../lessons/dto/lesson-response.dto";
+import {Public} from "../auth/decorator/public.decorator";
+import {RolesGuard} from "../auth/guard/roles.guard";
+import {Roles} from "../auth/decorator/roles.decorator";
 
 @Controller('courses')
+@UseGuards(RolesGuard)
+@Roles('ADMIN')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
   @Post()
-  create(@Body() createCourseDto: CreateCourseDto) {
+  async create(
+    @Body() createCourseDto: CreateCourseDto,
+  ): Promise<CourseResponseDto> {
     return this.coursesService.create(createCourseDto);
   }
 
   @Get()
-  findAll() {
+  @Public()
+  async findAll(): Promise<CourseResponseDto[]> {
     return this.coursesService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.coursesService.findOne(+id);
+  @Public()
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<CourseResponseDto> {
+    return this.coursesService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCourseDto: UpdateCourseDto) {
-    return this.coursesService.update(+id, updateCourseDto);
+  @Put(':id')
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateCourseDto: UpdateCourseDto,
+  ): Promise<CourseResponseDto> {
+    return this.coursesService.update(id, updateCourseDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.coursesService.remove(+id);
+  async remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
+    await this.coursesService.remove(id);
+    return { message: `Course with id ${id} has been deleted.` };
+  }
+
+  @Patch(':id/publish')
+  async publish(@Param('id', ParseIntPipe) id: number): Promise<CourseResponseDto> {
+    return this.coursesService.publishCourse(id);
+  }
+
+  @Get(':id/lessons')
+  @Public()
+  async getLessons(@Param('id', ParseIntPipe) id: number): Promise<LessonResponseDto[]> {
+    return this.coursesService.getLessonsByCourse(id);
   }
 }

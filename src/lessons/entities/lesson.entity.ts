@@ -1,8 +1,9 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {Column, Entity, ManyToOne, PrimaryGeneratedColumn, Unique} from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Course } from '../../courses/entities/course.entity';
 
 @Entity()
+@Unique(['user', 'course'])
 export class Lesson {
   @PrimaryGeneratedColumn()
   id: number;
