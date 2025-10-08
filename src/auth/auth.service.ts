@@ -148,4 +148,8 @@ export class AuthService {
       refreshToken,
     };
   }
+
+  async signout(userId: number) {
+    return await this.userService.updateHashedRefreshToken(userId, null);
+  }
 }

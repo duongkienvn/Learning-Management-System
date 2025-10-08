@@ -64,7 +64,8 @@ export class UsersService {
     }
   }
 
-  async updateHashedRefreshToken(userId: number, hashedRefreshToken: string) {
+  async updateHashedRefreshToken(userId: number, hashedRefreshToken: any) {
+    await this.findUserById(userId);
     return await this.userRepository.update(
       { id: userId },
       { hashedRefreshToken },
