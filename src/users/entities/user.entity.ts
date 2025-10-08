@@ -16,8 +16,10 @@ export class User {
   name: string;
   @Column({ unique: true })
   email: string;
-  @Column({ nullable: true })
+  @Column()
   password: string;
+  @Column({ nullable: true })
+  hashedRefreshToken: string;
   @ManyToOne(() => Role, (role) => role.users, { eager: true })
   role: Role;
   @OneToMany(() => Lesson, (lesson) => lesson.user)

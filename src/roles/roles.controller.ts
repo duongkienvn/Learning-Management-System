@@ -7,17 +7,14 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { Role } from './entities/role.entity';
-import { RolesGuard } from '../auth/guard/roles.guard';
 import { Roles } from '../auth/decorator/roles.decorator';
 
 @Controller('roles')
-@UseGuards(RolesGuard)
 @Roles('ADMIN')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}

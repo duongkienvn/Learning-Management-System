@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -10,14 +11,21 @@ import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../roles/entities/role.entity';
-import {UserResponseDto} from "../users/dto/user-response.dto";
-import {plainToInstance} from "class-transformer";
+import { UserResponseDto } from '../users/dto/user-response.dto';
+import { plainToInstance } from 'class-transformer';
+import * as argon2 from 'argon2';
+import refreshJwtConfig from './config/refresh-jwt.config';
+import type { ConfigType } from '@nestjs/config';
+import {UsersService} from "../users/users.service";
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     @InjectRepository(Role) private readonly roleRepository: Repository<Role>,
+    @Inject(refreshJwtConfig.KEY)
+    private refreshTokenConfig: ConfigType<typeof refreshJwtConfig>,
+    private readonly userService: UsersService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -68,13 +76,13 @@ export class AuthService {
       throw new UnauthorizedException('email or password is incorrect!');
     }
 
-    const token = this.jwtService.sign({
-      id: existingUser.id,
-      email: existingUser.email,
-    });
+    const { accessToken, refreshToken } = await this.generateToken(existingUser.id);
+    const hashedRefreshToken = await argon2.hash(refreshToken);
+    await this.userService.updateHashedRefreshToken(existingUser.id, hashedRefreshToken);
 
     return {
-      access_token: token,
+      accessToken,
+      refreshToken,
       user: {
         id: existingUser.id,
         email: existingUser.email,
@@ -92,7 +100,52 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
     return plainToInstance(UserResponseDto, user, {
-      excludeExtraneousValues: true
+      excludeExtraneousValues: true,
     });
+  }
+
+  async validateRefreshToken(
+    userId: number,
+    refreshToken: string,
+  ): Promise<any> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+    if (!user || !user.hashedRefreshToken) {
+      throw new UnauthorizedException('Invalid Refresh Token');
+    }
+
+    const refreshTokenMatches = await argon2.verify(
+      user.hashedRefreshToken,
+      refreshToken,
+    );
+    if (!refreshTokenMatches)
+      throw new UnauthorizedException('Invalid Refresh Token');
+
+    return { id: userId };
+  }
+
+  async refreshToken(userId: number) {
+    const { accessToken, refreshToken } = await this.generateToken(userId);
+    const hashedRefreshToken = await argon2.hash(refreshToken);
+    await this.userService.updateHashedRefreshToken(userId, hashedRefreshToken);
+
+    return {
+      id: userId,
+      accessToken,
+      refreshToken
+    }
+  }
+
+  async generateToken(userId: number) {
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync({ id: userId }),
+      this.jwtService.signAsync({ id: userId }, this.refreshTokenConfig),
+    ]);
+
+    return {
+      accessToken,
+      refreshToken,
+    };
   }
 }

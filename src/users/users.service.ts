@@ -63,4 +63,11 @@ export class UsersService {
       throw new NotFoundException(`User with id ${id} not found`);
     }
   }
+
+  async updateHashedRefreshToken(userId: number, hashedRefreshToken: string) {
+    return await this.userRepository.update(
+      { id: userId },
+      { hashedRefreshToken },
+    );
+  }
 }

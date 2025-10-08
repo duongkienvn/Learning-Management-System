@@ -8,7 +8,6 @@ import {
   Patch,
   Post,
   Put,
-  UseGuards,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
@@ -16,13 +15,11 @@ import { UpdateCourseDto } from './dto/update-course.dto';
 import { CourseResponseDto } from './dto/course-response.dto';
 import { LessonResponseDto } from '../lessons/dto/lesson-response.dto';
 import { Public } from '../auth/decorator/public.decorator';
-import { RolesGuard } from '../auth/guard/roles.guard';
 import { Roles } from '../auth/decorator/roles.decorator';
 import type { Paginated, PaginateQuery } from 'nestjs-paginate';
 import { Paginate } from 'nestjs-paginate';
 
 @Controller('courses')
-@UseGuards(RolesGuard)
 @Roles('ADMIN')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
