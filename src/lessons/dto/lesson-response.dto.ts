@@ -4,6 +4,8 @@ export class LessonResponseDto {
   @Expose()
   id: number;
   @Expose()
+  content: string;
+  @Expose()
   completed: boolean;
   @Expose()
   progress: number;

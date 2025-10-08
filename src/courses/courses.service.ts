@@ -7,6 +7,7 @@ import { Repository } from 'typeorm';
 import { CourseResponseDto } from './dto/course-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { LessonResponseDto } from '../lessons/dto/lesson-response.dto';
+import { paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
 
 @Injectable()
 export class CoursesService {
@@ -25,22 +26,37 @@ export class CoursesService {
 
     const savedCourse = await this.courseRepository.save(course);
 
-    return plainToInstance(CourseResponseDto, savedCourse);
+    return plainToInstance(CourseResponseDto, savedCourse, {
+      excludeExtraneousValues: true
+    });
   }
 
-  async findAll(): Promise<CourseResponseDto[]> {
-    const courses = await this.courseRepository.find({
-      relations: ['lessons'],
-      order: { createdAt: 'DESC' },
+  async findAll(query: PaginateQuery): Promise<Paginated<CourseResponseDto>> {
+    const paginated = await paginate(query, this.courseRepository, {
+      relations: ['lessons', 'lessons.user', 'lessons.course'],
+      sortableColumns: ['createdAt', 'title'],
+      defaultSortBy: [['createdAt', 'DESC']],
+      searchableColumns: ['title', 'description'],
+      maxLimit: 20,
+      defaultLimit: 10,
     });
 
-    return plainToInstance(CourseResponseDto, courses);
+    const dbData = plainToInstance(CourseResponseDto, paginated.data, {
+      excludeExtraneousValues: true,
+    });
+
+    return {
+      ...paginated,
+      data: dbData,
+    } as Paginated<CourseResponseDto>;
   }
 
   async findOne(id: number): Promise<CourseResponseDto> {
     const course = await this.findCourseById(id);
 
-    return plainToInstance(CourseResponseDto, course);
+    return plainToInstance(CourseResponseDto, course, {
+      excludeExtraneousValues: true
+    });
   }
 
   async update(
@@ -50,11 +66,13 @@ export class CoursesService {
     const course = await this.findCourseById(id);
     Object.assign(course, {
       ...updateCourseDto,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
     const updatedCourse = await this.courseRepository.save(course);
 
-    return plainToInstance(CourseResponseDto, updatedCourse);
+    return plainToInstance(CourseResponseDto, updatedCourse, {
+      excludeExtraneousValues: true
+    });
   }
 
   async remove(id: number): Promise<void> {
@@ -72,18 +90,22 @@ export class CoursesService {
       const updatedCourse = await this.courseRepository.save(course);
       return plainToInstance(CourseResponseDto, updatedCourse);
     }
-    return plainToInstance(CourseResponseDto, course);
+    return plainToInstance(CourseResponseDto, course, {
+      excludeExtraneousValues: true
+    });
   }
 
   async getLessonsByCourse(id: number): Promise<LessonResponseDto[]> {
     const course = await this.findCourseById(id);
-    return plainToInstance(LessonResponseDto, course.lessons);
+    return plainToInstance(LessonResponseDto, course.lessons, {
+      excludeExtraneousValues: true
+    });
   }
 
   private async findCourseById(id: number): Promise<Course> {
     const course = await this.courseRepository.findOne({
       where: { id },
-      relations: ['lessons'],
+      relations: ['lessons', 'lessons.user', 'lessons.course'],
     });
 
     if (!course) {

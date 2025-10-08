@@ -38,19 +38,12 @@ export class LessonsService {
       throw new NotFoundException(`Course with ID ${courseId} not found`);
     }
 
-    const existingLesson = await this.lessonRepository.findOne({
-      where: { user: { id: userId }, course: { id: courseId } },
-    });
-
-    if (existingLesson) {
-      throw new BadRequestException(
-        `Lesson already exists for user ${userId} and course ${courseId}`,
-      );
-    }
+    const content = createLessonDto.content;
 
     const lesson = this.lessonRepository.create({
       user,
       course,
+      content,
       completed: false,
       progress: 0,
     });

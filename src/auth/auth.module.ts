@@ -8,17 +8,20 @@ import { JwtModule } from '@nestjs/jwt';
 import { Role } from '../roles/entities/role.entity';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './strategy/jwt.strategy';
-import { jwtConstants } from './constant/constants';
+import { ConfigService } from '@nestjs/config';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Role]),
     PassportModule,
     UsersModule,
-    JwtModule.register({
-      global: true,
-      secret: jwtConstants.secretKey,
-      signOptions: { expiresIn: '1d' },
+    JwtModule.registerAsync({
+      useFactory: async (configService: ConfigService) => ({
+        global: true,
+        secret: configService.get<string>('SECRET_KEY'),
+        signOptions: { expiresIn: configService.get<string>('JWT_EXPIRE_IN') },
+      }),
+      inject: [ConfigService],
     }),
   ],
   controllers: [AuthController],

@@ -6,16 +6,20 @@ import {
   Param,
   ParseIntPipe,
   Patch,
-  Post, Put, UseGuards,
+  Post,
+  Put,
+  UseGuards,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { CourseResponseDto } from './dto/course-response.dto';
-import {LessonResponseDto} from "../lessons/dto/lesson-response.dto";
-import {Public} from "../auth/decorator/public.decorator";
-import {RolesGuard} from "../auth/guard/roles.guard";
-import {Roles} from "../auth/decorator/roles.decorator";
+import { LessonResponseDto } from '../lessons/dto/lesson-response.dto';
+import { Public } from '../auth/decorator/public.decorator';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { Roles } from '../auth/decorator/roles.decorator';
+import type { Paginated, PaginateQuery } from 'nestjs-paginate';
+import { Paginate } from 'nestjs-paginate';
 
 @Controller('courses')
 @UseGuards(RolesGuard)
@@ -32,8 +36,10 @@ export class CoursesController {
 
   @Get()
   @Public()
-  async findAll(): Promise<CourseResponseDto[]> {
-    return this.coursesService.findAll();
+  async findAll(
+    @Paginate() query: PaginateQuery,
+  ): Promise<Paginated<CourseResponseDto>> {
+    return this.coursesService.findAll(query);
   }
 
   @Get(':id')
@@ -53,19 +59,25 @@ export class CoursesController {
   }
 
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number): Promise<{ message: string }> {
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ message: string }> {
     await this.coursesService.remove(id);
     return { message: `Course with id ${id} has been deleted.` };
   }
 
   @Patch(':id/publish')
-  async publish(@Param('id', ParseIntPipe) id: number): Promise<CourseResponseDto> {
+  async publish(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<CourseResponseDto> {
     return this.coursesService.publishCourse(id);
   }
 
   @Get(':id/lessons')
   @Public()
-  async getLessons(@Param('id', ParseIntPipe) id: number): Promise<LessonResponseDto[]> {
+  async getLessons(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<LessonResponseDto[]> {
     return this.coursesService.getLessonsByCourse(id);
   }
 }
