@@ -8,23 +8,30 @@ import { JwtModule } from '@nestjs/jwt';
 import { Role } from '../roles/entities/role.entity';
 import { UsersModule } from '../users/users.module';
 import { JwtStrategy } from './strategy/jwt.strategy';
-import { ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
+import jwtConfig from './config/jwt.config';
+import refreshJwtConfig from './config/refresh-jwt.config';
+import { RefreshJwtStrategy } from './strategy/refresh-jwt.strategy';
+import { UsersService } from '../users/users.service';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Role]),
     PassportModule,
     UsersModule,
-    JwtModule.registerAsync({
-      useFactory: async (configService: ConfigService) => ({
-        global: true,
-        secret: configService.get<string>('SECRET_KEY'),
-        signOptions: { expiresIn: configService.get<string>('JWT_EXPIRE_IN') },
-      }),
-      inject: [ConfigService],
-    }),
+    // JwtModule.registerAsync({
+    //   useFactory: async (configService: ConfigService) => ({
+    //     global: true,
+    //     secret: configService.get<string>('SECRET_KEY'),
+    //     signOptions: { expiresIn: configService.get<string>('JWT_EXPIRE_IN') },
+    //   }),
+    //   inject: [ConfigService],
+    // }),
+    JwtModule.registerAsync(jwtConfig.asProvider()),
+    ConfigModule.forFeature(jwtConfig),
+    ConfigModule.forFeature(refreshJwtConfig),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, RefreshJwtStrategy, UsersService],
 })
 export class AuthModule {}
