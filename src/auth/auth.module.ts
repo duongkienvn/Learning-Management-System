@@ -13,25 +13,32 @@ import jwtConfig from './config/jwt.config';
 import refreshJwtConfig from './config/refresh-jwt.config';
 import { RefreshJwtStrategy } from './strategy/refresh-jwt.strategy';
 import { UsersService } from '../users/users.service';
+import { JwtAuthGuard } from './guard/jwt-auth.guard';
+import { RolesGuard } from './guard/roles.guard';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Role]),
     PassportModule,
     UsersModule,
-    // JwtModule.registerAsync({
-    //   useFactory: async (configService: ConfigService) => ({
-    //     global: true,
-    //     secret: configService.get<string>('SECRET_KEY'),
-    //     signOptions: { expiresIn: configService.get<string>('JWT_EXPIRE_IN') },
-    //   }),
-    //   inject: [ConfigService],
-    // }),
     JwtModule.registerAsync(jwtConfig.asProvider()),
     ConfigModule.forFeature(jwtConfig),
     ConfigModule.forFeature(refreshJwtConfig),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, RefreshJwtStrategy, UsersService],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    RefreshJwtStrategy,
+    UsersService,
+    {
+      provide: 'APP_GUARD',
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: 'APP_GUARD',
+      useClass: RolesGuard,
+    },
+  ],
 })
 export class AuthModule {}
