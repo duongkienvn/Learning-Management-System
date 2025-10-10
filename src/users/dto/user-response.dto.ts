@@ -3,9 +3,6 @@ import { RoleResponseDto } from '../../roles/dto/role-response.dto';
 
 @Exclude()
 export class UserResponseDto {
-  constructor(partial: Partial<UserResponseDto>) {
-    Object.assign(this, partial);
-  }
   @Expose()
   id: number;
   @Expose()

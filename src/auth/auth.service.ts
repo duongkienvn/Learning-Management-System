@@ -16,7 +16,7 @@ import { plainToInstance } from 'class-transformer';
 import * as argon2 from 'argon2';
 import refreshJwtConfig from './config/refresh-jwt.config';
 import type { ConfigType } from '@nestjs/config';
-import {UsersService} from "../users/users.service";
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
@@ -76,9 +76,14 @@ export class AuthService {
       throw new UnauthorizedException('email or password is incorrect!');
     }
 
-    const { accessToken, refreshToken } = await this.generateToken(existingUser.id);
+    const { accessToken, refreshToken } = await this.generateToken(
+      existingUser.id,
+    );
     const hashedRefreshToken = await argon2.hash(refreshToken);
-    await this.userService.updateHashedRefreshToken(existingUser.id, hashedRefreshToken);
+    await this.userService.updateHashedRefreshToken(
+      existingUser.id,
+      hashedRefreshToken,
+    );
 
     return {
       accessToken,
@@ -133,8 +138,8 @@ export class AuthService {
     return {
       id: userId,
       accessToken,
-      refreshToken
-    }
+      refreshToken,
+    };
   }
 
   async generateToken(userId: number) {
