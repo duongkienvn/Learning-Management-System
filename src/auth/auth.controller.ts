@@ -1,9 +1,17 @@
-import {Body, Controller, HttpCode, HttpStatus, Param, Post, Req, UseGuards} from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { Public } from './decorator/public.decorator';
 import { RefreshAuthGuard } from './guard/refresh-auth.guard';
-import {JwtAuthGuard} from "./guard/jwt-auth.guard";
 
 @Controller('auth')
 @Public()
@@ -33,7 +41,7 @@ export class AuthController {
   async signout(@Param('id') userId: number): Promise<{ message: string }> {
     await this.authService.signout(userId);
     return {
-      message: 'Signout successfully!'
-    }
+      message: 'Signout successfully!',
+    };
   }
 }

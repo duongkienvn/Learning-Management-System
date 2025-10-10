@@ -1,7 +1,8 @@
 import { LessonResponseDto } from '../../lessons/dto/lesson-response.dto';
-import {Expose, Transform, Type} from 'class-transformer';
+import {Exclude, Expose, Transform, Type} from 'class-transformer';
 import dayjs from 'dayjs';
 
+@Exclude()
 export class CourseResponseDto {
   @Expose()
   id: string;
