@@ -14,6 +14,8 @@ export class Lesson {
   progress: number;
   @ManyToOne(() => User, (user) => user.lessons)
   user: User;
-  @ManyToOne(() => Course, (course) => course.lessons)
+  @ManyToOne(() => Course, (course) => course.lessons, {
+    onDelete: "CASCADE"
+  })
   course: Course;
 }

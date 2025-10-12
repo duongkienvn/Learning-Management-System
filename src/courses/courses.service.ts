@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -8,12 +8,18 @@ import { CourseResponseDto } from './dto/course-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { LessonResponseDto } from '../lessons/dto/lesson-response.dto';
 import { paginate, Paginated, PaginateQuery } from 'nestjs-paginate';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
+import * as crypto from 'crypto';
+import Redis from 'ioredis';
 
 @Injectable()
 export class CoursesService {
   constructor(
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    @Inject('REDIS_CLIENT') private readonly redisClient: Redis,
   ) {}
 
   async create(createCourseDto: CreateCourseDto): Promise<CourseResponseDto> {
@@ -26,12 +32,25 @@ export class CoursesService {
 
     const savedCourse = await this.courseRepository.save(course);
 
+    await this.clearCoursesCache();
+
     return plainToInstance(CourseResponseDto, savedCourse, {
-      excludeExtraneousValues: true
+      excludeExtraneousValues: true,
     });
   }
 
   async findAll(query: PaginateQuery): Promise<Paginated<CourseResponseDto>> {
+    const hashedQuery = crypto
+      .createHash('md5')
+      .update(JSON.stringify(query))
+      .digest('hex');
+    const cachedKey = `courses:all:${hashedQuery}`;
+
+    const cached =
+      await this.cacheManager.get<Paginated<CourseResponseDto>>(cachedKey);
+
+    if (cached) return cached;
+
     const paginated = await paginate(query, this.courseRepository, {
       relations: ['lessons', 'lessons.user', 'lessons.course'],
       sortableColumns: ['createdAt', 'title'],
@@ -45,18 +64,29 @@ export class CoursesService {
       excludeExtraneousValues: true,
     });
 
-    return {
+    const result = {
       ...paginated,
       data: dbData,
     } as Paginated<CourseResponseDto>;
+
+    await this.cacheManager.set(cachedKey, result, 60 * 1000 * 30);
+
+    return result;
   }
 
   async findOne(id: number): Promise<CourseResponseDto> {
-    const course = await this.findCourseById(id);
+    const cacheKey = `courses:${id}`;
+    const cached = await this.cacheManager.get<CourseResponseDto>(cacheKey);
+    if (cached) return cached;
 
-    return plainToInstance(CourseResponseDto, course, {
-      excludeExtraneousValues: true
+    const course = await this.findCourseById(id);
+    const result = plainToInstance(CourseResponseDto, course, {
+      excludeExtraneousValues: true,
     });
+
+    await this.cacheManager.set(cacheKey, result, 60 * 1000 * 10);
+
+    return result;
   }
 
   async update(
@@ -70,8 +100,10 @@ export class CoursesService {
     });
     const updatedCourse = await this.courseRepository.save(course);
 
+    await this.clearCoursesCache();
+
     return plainToInstance(CourseResponseDto, updatedCourse, {
-      excludeExtraneousValues: true
+      excludeExtraneousValues: true,
     });
   }
 
@@ -80,6 +112,7 @@ export class CoursesService {
     if (result.affected === 0) {
       throw new NotFoundException(`Course with id ${id} not found`);
     }
+    await this.clearCoursesCache();
   }
 
   async publishCourse(id: number): Promise<CourseResponseDto> {
@@ -90,16 +123,29 @@ export class CoursesService {
       const updatedCourse = await this.courseRepository.save(course);
       return plainToInstance(CourseResponseDto, updatedCourse);
     }
+
+    await this.clearCoursesCache();
+
     return plainToInstance(CourseResponseDto, course, {
-      excludeExtraneousValues: true
+      excludeExtraneousValues: true,
     });
   }
 
   async getLessonsByCourse(id: number): Promise<LessonResponseDto[]> {
+    const cachKey = `courses:${id}:lessons`;
+    const cached = await this.cacheManager.get<LessonResponseDto[]>(cachKey);
+
+    if (cached) return cached;
+
     const course = await this.findCourseById(id);
-    return plainToInstance(LessonResponseDto, course.lessons, {
-      excludeExtraneousValues: true
+
+    const lessons = plainToInstance(LessonResponseDto, course.lessons, {
+      excludeExtraneousValues: true,
     });
+
+    await this.cacheManager.set(cachKey, lessons, 60 * 1000 * 10);
+
+    return lessons;
   }
 
   private async findCourseById(id: number): Promise<Course> {
@@ -113,5 +159,12 @@ export class CoursesService {
     }
 
     return course;
+  }
+
+  async clearCoursesCache(): Promise<void> {
+    const keys = await this.redisClient.keys('courses:*');
+    if (keys.length > 0) {
+      await this.redisClient.del(...keys);
+    }
   }
 }
