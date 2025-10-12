@@ -20,7 +20,10 @@ export class User {
   password: string;
   @Column({ nullable: true })
   hashedRefreshToken: string;
-  @ManyToOne(() => Role, (role) => role.users, { eager: true })
+  @ManyToOne(() => Role, (role) => role.users, {
+    eager: true,
+    onDelete: "CASCADE"
+  })
   role: Role;
   @OneToMany(() => Lesson, (lesson) => lesson.user)
   lessons: Lesson[];

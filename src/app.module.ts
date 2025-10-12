@@ -8,6 +8,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { RolesModule } from './roles/roles.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CacheModule } from '@nestjs/cache-manager';
+import KeyvRedis from '@keyv/redis';
 
 @Module({
   imports: [
@@ -31,6 +33,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
     LessonsModule,
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => {
+        return {
+          stores: [new KeyvRedis('redis://localhost:6379')],
+        };
+      },
     }),
   ],
   controllers: [AppController],

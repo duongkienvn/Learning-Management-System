@@ -6,13 +6,14 @@ import {
   Param,
   ParseIntPipe,
   Put,
-  UseGuards,
+  UseGuards, UseInterceptors,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { Roles } from '../auth/decorator/roles.decorator';
 import { UserOwnershipGuard } from '../auth/guard/user-ownership.guard';
+import {CacheInterceptor} from "@nestjs/cache-manager";
 
 @Controller('users')
 export class UsersController {
@@ -21,6 +22,7 @@ export class UsersController {
   @Get()
   @Roles('ADMIN')
   async findAll(): Promise<UserResponseDto[]> {
+    console.log('user controller');
     return this.usersService.findAll();
   }
 
@@ -29,6 +31,7 @@ export class UsersController {
   async findOne(
     @Param('id', ParseIntPipe) id: number,
   ): Promise<UserResponseDto> {
+    console.log('find one user');
     return this.usersService.findOne(id);
   }
 
