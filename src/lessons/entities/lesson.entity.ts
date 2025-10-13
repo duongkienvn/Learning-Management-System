@@ -18,4 +18,6 @@ export class Lesson {
     onDelete: "CASCADE"
   })
   course: Course;
+  courseOwnerId?: number;
+  registeredUserId?: number
 }

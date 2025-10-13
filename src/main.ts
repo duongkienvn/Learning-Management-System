@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import process from 'node:process';
 import { updateGlobalConfig } from 'nestjs-paginate';
 import {DocumentBuilder, SwaggerModule} from "@nestjs/swagger";
+import {AllExceptionsFilters} from "./exception/all-exceptions.filters";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,6 +21,8 @@ async function bootstrap() {
     defaultLimit: 10,
     defaultMaxLimit: 100,
   });
+
+  app.useGlobalFilters(new AllExceptionsFilters());
 
   const config = new DocumentBuilder()
     .setTitle('Learnning Management System')

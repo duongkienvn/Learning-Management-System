@@ -1,6 +1,6 @@
-import {setSeederFactory} from "typeorm-extension";
-import {Course} from "../courses/entities/course.entity";
-import {faker} from "@faker-js/faker";
+import { setSeederFactory } from 'typeorm-extension';
+import { Course } from '../courses/entities/course.entity';
+import { faker } from '@faker-js/faker';
 
 export const CourseFactory = setSeederFactory(Course, () => {
   const course = new Course();
@@ -9,6 +9,7 @@ export const CourseFactory = setSeederFactory(Course, () => {
   course.isPublished = faker.datatype.boolean();
   course.createdAt = faker.date.past();
   course.updatedAt = faker.date.recent();
+  course.createdBy = 1;
 
   return course;
 });

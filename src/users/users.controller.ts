@@ -6,47 +6,55 @@ import {
   Param,
   ParseIntPipe,
   Put,
-  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import { Roles } from '../auth/decorator/roles.decorator';
-import { UserOwnershipGuard } from '../auth/guard/user-ownership.guard';
+import { CheckPolicies } from '../casl/decorator/check-policies.decorator';
+import {
+  DeleteUserPolicyHandler, ManageUserPolicyHandler,
+  ReadUserPolicyHandler,
+  UpdateUserPolicyHandler,
+} from './policies/user.policies';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @Roles('ADMIN')
+  @CheckPolicies(new ManageUserPolicyHandler())
   async findAll(): Promise<UserResponseDto[]> {
     return this.usersService.findAll();
   }
 
   @Get(':id')
-  @UseGuards(UserOwnershipGuard)
+  @CheckPolicies(new ReadUserPolicyHandler())
   async findOne(
     @Param('id', ParseIntPipe) id: number,
+    @Req() req: any,
   ): Promise<UserResponseDto> {
-    return this.usersService.findOne(id);
+    const userReq = req.user;
+    return this.usersService.findOne(id, userReq);
   }
 
   @Put(':id')
-  @UseGuards(UserOwnershipGuard)
+  @CheckPolicies(new UpdateUserPolicyHandler())
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
+    @Req() req: any
   ): Promise<UserResponseDto> {
-    return this.usersService.update(id, updateUserDto);
+    return this.usersService.update(id, updateUserDto, req.user);
   }
 
   @Delete(':id')
-  @UseGuards(UserOwnershipGuard)
+  @CheckPolicies(new DeleteUserPolicyHandler())
   async remove(
     @Param('id', ParseIntPipe) id: number,
+    @Req() req: any
   ): Promise<{ message: string }> {
-    await this.usersService.remove(id);
+    await this.usersService.remove(id, req.user);
     return { message: `User with id ${id} has been removed.` };
   }
 }

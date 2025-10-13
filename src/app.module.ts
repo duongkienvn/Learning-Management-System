@@ -9,7 +9,11 @@ import { RolesModule } from './roles/roles.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CacheModule } from '@nestjs/cache-manager';
+import { CaslModule } from './casl/casl.module';
 import KeyvRedis from '@keyv/redis';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/guard/jwt-auth.guard';
+import { PoliciesGuard } from './casl/guard/policies.guard';
 
 @Module({
   imports: [
@@ -42,8 +46,19 @@ import KeyvRedis from '@keyv/redis';
         };
       },
     }),
+    CaslModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: PoliciesGuard,
+    },
+  ],
 })
 export class AppModule {}

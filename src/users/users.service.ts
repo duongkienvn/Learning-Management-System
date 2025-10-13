@@ -5,11 +5,14 @@ import { User } from './entities/user.entity';
 import { Repository } from 'typeorm';
 import { UserResponseDto } from './dto/user-response.dto';
 import { plainToInstance } from 'class-transformer';
+import {Action, CaslAbilityFactory} from '../casl/casl-ability.factory/casl-ability.factory';
+import {ForbiddenError} from "@casl/ability";
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private userRepository: Repository<User>,
+    private caslAbilityFactory: CaslAbilityFactory,
   ) {}
 
   async findAll(): Promise<UserResponseDto[]> {
@@ -35,8 +38,11 @@ export class UsersService {
     return user;
   }
 
-  async findOne(id: number): Promise<UserResponseDto> {
+  async findOne(id: number, userReq: User): Promise<UserResponseDto> {
     const user = await this.findUserById(id);
+
+    const ability = this.caslAbilityFactory.createForUser(userReq);
+    ForbiddenError.from(ability).throwUnlessCan(Action.Read, user);
 
     return plainToInstance(UserResponseDto, user, {
       excludeExtraneousValues: true,
@@ -46,8 +52,13 @@ export class UsersService {
   async update(
     id: number,
     updateUserDto: UpdateUserDto,
+    userReq: User
   ): Promise<UserResponseDto> {
     const existingUser = await this.findUserById(id);
+
+    const ability = this.caslAbilityFactory.createForUser(userReq);
+    ForbiddenError.from(ability).throwUnlessCan(Action.Update, existingUser);
+
     Object.assign(existingUser, updateUserDto);
 
     const updatedUser = await this.userRepository.save(existingUser);
@@ -57,11 +68,10 @@ export class UsersService {
     });
   }
 
-  async remove(id: number): Promise<void> {
-    const result = await this.userRepository.delete(id);
-    if (result.affected == 0) {
-      throw new NotFoundException(`User with id ${id} not found`);
-    }
+  async remove(id: number, userReq: User): Promise<void> {
+    const existingUser = await this.findUserById(id);
+    const ability = this.caslAbilityFactory.createForUser(userReq);
+    ForbiddenError.from(ability).throwUnlessCan(Action.Delete, existingUser);
   }
 
   async updateHashedRefreshToken(userId: number, hashedRefreshToken: any) {

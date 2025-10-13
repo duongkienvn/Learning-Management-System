@@ -22,7 +22,7 @@ export class User {
   hashedRefreshToken: string;
   @ManyToOne(() => Role, (role) => role.users, {
     eager: true,
-    onDelete: "CASCADE"
+    onDelete: 'CASCADE',
   })
   role: Role;
   @OneToMany(() => Lesson, (lesson) => lesson.user)

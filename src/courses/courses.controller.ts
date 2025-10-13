@@ -8,27 +8,35 @@ import {
   Patch,
   Post,
   Put,
+  Req,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { CourseResponseDto } from './dto/course-response.dto';
-import { LessonResponseDto } from '../lessons/dto/lesson-response.dto';
-import { Public } from '../auth/decorator/public.decorator';
-import { Roles } from '../auth/decorator/roles.decorator';
 import type { Paginated, PaginateQuery } from 'nestjs-paginate';
 import { Paginate } from 'nestjs-paginate';
+import { CheckPolicies } from '../casl/decorator/check-policies.decorator';
+import {
+  CreateCoursePolicyHandler,
+  DeleteCoursePolicyHandler,
+  UpdateCoursePolicyHandler,
+} from './policies/course.policies';
+import { Public } from '../auth/decorator/public.decorator';
+import { User } from '../users/entities/user.entity';
 
 @Controller('courses')
-@Roles('ADMIN')
 export class CoursesController {
   constructor(private readonly coursesService: CoursesService) {}
 
   @Post()
+  @CheckPolicies(new CreateCoursePolicyHandler())
   async create(
     @Body() createCourseDto: CreateCourseDto,
+    @Req() req: any,
   ): Promise<CourseResponseDto> {
-    return this.coursesService.create(createCourseDto);
+    const user = req.user;
+    return this.coursesService.create(createCourseDto, user);
   }
 
   @Get()
@@ -48,33 +56,34 @@ export class CoursesController {
   }
 
   @Put(':id')
+  @CheckPolicies(new UpdateCoursePolicyHandler())
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCourseDto: UpdateCourseDto,
+    @Req() req: any,
   ): Promise<CourseResponseDto> {
-    return this.coursesService.update(id, updateCourseDto);
+    const user = req.user;
+    return this.coursesService.update(id, updateCourseDto, user);
   }
 
   @Delete(':id')
+  @CheckPolicies(new DeleteCoursePolicyHandler())
   async remove(
     @Param('id', ParseIntPipe) id: number,
+    @Req() req: any,
   ): Promise<{ message: string }> {
-    await this.coursesService.remove(id);
+    const user: User = req.user;
+    await this.coursesService.remove(id, user);
     return { message: `Course with id ${id} has been deleted.` };
   }
 
   @Patch(':id/publish')
+  @CheckPolicies(new UpdateCoursePolicyHandler())
   async publish(
     @Param('id', ParseIntPipe) id: number,
+    @Req() req: any,
   ): Promise<CourseResponseDto> {
-    return this.coursesService.publishCourse(id);
-  }
-
-  @Get(':id/lessons')
-  @Public()
-  async getLessons(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<LessonResponseDto[]> {
-    return this.coursesService.getLessonsByCourse(id);
+    const user = req.user;
+    return this.coursesService.publishCourse(id, user);
   }
 }
