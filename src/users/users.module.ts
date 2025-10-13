@@ -5,9 +5,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { Lesson } from '../lessons/entities/lesson.entity';
 import { Role } from '../roles/entities/role.entity';
+import {CaslModule} from "../casl/casl.module";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([User, Lesson, Role])],
+  imports: [TypeOrmModule.forFeature([User, Lesson, Role]), CaslModule],
   controllers: [UsersController],
   providers: [UsersService],
 })

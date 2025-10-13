@@ -18,7 +18,9 @@ export default class MainSeeder implements Seeder {
     const roleRepository = datasource.getRepository(Role);
     const userRepository = datasource.getRepository(User);
     const lessonRepository = datasource.getRepository(Lesson);
+    const courseRepository = datasource.getRepository(Course);
 
+    // --- Roles ---
     let adminRole = await roleRepository.findOne({ where: { name: 'ADMIN' } });
     if (!adminRole) {
       adminRole = roleRepository.create({ name: 'ADMIN' });
@@ -31,15 +33,39 @@ export default class MainSeeder implements Seeder {
       await roleRepository.save(userRole);
     }
 
-    const users = await userFactory.saveMany(10);
+    let teacherRole = await roleRepository.findOne({ where: { name: 'TEACHER' } });
+    if (!teacherRole) {
+      teacherRole = roleRepository.create({ name: 'TEACHER' });
+      await roleRepository.save(teacherRole);
+    }
+
+    // --- Users ---
+    const users = await userFactory.saveMany(15);
+
     users[0].role = adminRole;
-    for (let i = 1; i < users.length; i++) {
+    users[1].role = teacherRole;
+    users[2].role = teacherRole;
+    users[3].role = teacherRole;
+
+    for (let i = 4; i < users.length; i++) {
       users[i].role = userRole;
     }
     await userRepository.save(users);
 
+    const teacherUsers = users.filter((u) => u.role.name === 'TEACHER');
+
+    // --- Courses ---
     const courses = await courseFactory.saveMany(20);
 
+    for (const course of courses) {
+      const teacher = faker.helpers.arrayElement(teacherUsers);
+      course.createdBy = teacher.id;
+      course.updatedBy = teacher.id;
+    }
+
+    await courseRepository.save(courses);
+
+    // --- Lessons ---
     for (const user of users) {
       const sampleCourses = faker.helpers.arrayElements(
         courses,
@@ -48,10 +74,8 @@ export default class MainSeeder implements Seeder {
 
       for (const course of sampleCourses) {
         const lesson = await lessonFactory.make();
-
         lesson.user = user;
         lesson.course = course;
-
         await lessonRepository.save(lesson);
       }
     }

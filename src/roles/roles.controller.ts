@@ -12,10 +12,11 @@ import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { Role } from './entities/role.entity';
-import { Roles } from '../auth/decorator/roles.decorator';
+import { CheckPolicies } from '../casl/decorator/check-policies.decorator';
+import { ManageRolePolicyHandler } from './policies/role.policies';
 
 @Controller('roles')
-@Roles('ADMIN')
+@CheckPolicies(new ManageRolePolicyHandler())
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 

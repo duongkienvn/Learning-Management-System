@@ -1,4 +1,4 @@
-import {BadRequestException, Injectable, NotFoundException} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -8,6 +8,8 @@ import { LessonResponseDto } from './dto/lesson-response.dto';
 import { plainToInstance } from 'class-transformer';
 import { User } from '../users/entities/user.entity';
 import { Course } from '../courses/entities/course.entity';
+import {Action, CaslAbilityFactory} from '../casl/casl-ability.factory/casl-ability.factory';
+import {ForbiddenError} from "@casl/ability";
 
 @Injectable()
 export class LessonsService {
@@ -18,6 +20,7 @@ export class LessonsService {
     private readonly userRepository: Repository<User>,
     @InjectRepository(Course)
     private readonly courseRepository: Repository<Course>,
+    private caslAbilityFactory: CaslAbilityFactory,
   ) {}
 
   async create(createLessonDto: CreateLessonDto): Promise<LessonResponseDto> {
@@ -75,8 +78,13 @@ export class LessonsService {
   async update(
     id: number,
     updateLessonDto: UpdateLessonDto,
+    userReq: User,
   ): Promise<LessonResponseDto> {
     const lesson = await this.findLessonById(id);
+
+    const ability = this.caslAbilityFactory.createForUser(userReq);
+    ForbiddenError.from(ability).throwUnlessCan(Action.Update, lesson);
+
     Object.assign(lesson, updateLessonDto);
     const updatedLesson = await this.lessonRepository.save(lesson);
     return plainToInstance(LessonResponseDto, updatedLesson, {
@@ -84,15 +92,21 @@ export class LessonsService {
     });
   }
 
-  async remove(id: number): Promise<void> {
-    const result = await this.lessonRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Lesson with id ${id} not found!`);
-    }
+  async remove(id: number, user: User): Promise<void> {
+    const lesson = await this.findLessonById(id);
+
+    const ability = this.caslAbilityFactory.createForUser(user);
+    ForbiddenError.from(ability).throwUnlessCan(Action.Delete, lesson);
+
+    await this.lessonRepository.remove(lesson);
   }
 
-  async markAsCompleted(id: number): Promise<LessonResponseDto> {
+  async markAsCompleted(id: number, user: User): Promise<LessonResponseDto> {
     const lesson = await this.findLessonById(id);
+
+    const ability = this.caslAbilityFactory.createForUser(user);
+    ForbiddenError.from(ability).throwUnlessCan(Action.Update, lesson);
+
     lesson.completed = true;
     lesson.progress = 1.0;
     const updatedLesson = await this.lessonRepository.save(lesson);
@@ -104,8 +118,13 @@ export class LessonsService {
   async updateProgress(
     id: number,
     progress: number,
+    user: User
   ): Promise<LessonResponseDto> {
     const lesson = await this.findLessonById(id);
+
+    const ability = this.caslAbilityFactory.createForUser(user);
+    ForbiddenError.from(ability).throwUnlessCan(Action.Update, lesson);
+
     lesson.progress = Math.min(1, Math.max(0, progress));
     lesson.completed = lesson.progress === 1;
     const updatedLesson = await this.lessonRepository.save(lesson);
@@ -133,6 +152,9 @@ export class LessonsService {
     if (!lesson) {
       throw new NotFoundException(`Lesson with id ${id} not found!`);
     }
+
+    lesson.courseOwnerId = lesson.course.createdBy;
+    lesson.registeredUserId = lesson.user.id;
 
     return lesson;
   }

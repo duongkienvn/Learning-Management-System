@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {ForbiddenException, Inject, Injectable, NotFoundException} from '@nestjs/common';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -12,6 +12,9 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import * as crypto from 'crypto';
 import Redis from 'ioredis';
+import { User } from '../users/entities/user.entity';
+import {Action, CaslAbilityFactory} from '../casl/casl-ability.factory/casl-ability.factory';
+import {ForbiddenError} from "@casl/ability";
 
 @Injectable()
 export class CoursesService {
@@ -20,11 +23,17 @@ export class CoursesService {
     private readonly courseRepository: Repository<Course>,
     @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
     @Inject('REDIS_CLIENT') private readonly redisClient: Redis,
+    private caslAbilityFactory: CaslAbilityFactory,
   ) {}
 
-  async create(createCourseDto: CreateCourseDto): Promise<CourseResponseDto> {
+  async create(
+    createCourseDto: CreateCourseDto,
+    user: User,
+  ): Promise<CourseResponseDto> {
     const course = this.courseRepository.create({
       ...createCourseDto,
+      createdBy: user.id,
+      updatedBy: user.id,
       createdAt: new Date(),
       updatedAt: new Date(),
       isPublished: false,
@@ -92,11 +101,17 @@ export class CoursesService {
   async update(
     id: number,
     updateCourseDto: UpdateCourseDto,
+    user: User,
   ): Promise<CourseResponseDto> {
     const course = await this.findCourseById(id);
+
+    const ability = this.caslAbilityFactory.createForUser(user);
+    ForbiddenError.from(ability).throwUnlessCan(Action.Update, course);
+
     Object.assign(course, {
       ...updateCourseDto,
       updatedAt: new Date(),
+      updatedBy: user.id,
     });
     const updatedCourse = await this.courseRepository.save(course);
 
@@ -107,19 +122,26 @@ export class CoursesService {
     });
   }
 
-  async remove(id: number): Promise<void> {
-    const result = await this.courseRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Course with id ${id} not found`);
-    }
+  async remove(id: number, user: User): Promise<void> {
+    const course = await this.findCourseById(id);
+
+    const ability = this.caslAbilityFactory.createForUser(user);
+    ForbiddenError.from(ability).throwUnlessCan(Action.Delete, course);
+
+    await this.courseRepository.remove(course);
     await this.clearCoursesCache();
   }
 
-  async publishCourse(id: number): Promise<CourseResponseDto> {
+  async publishCourse(id: number, user: User): Promise<CourseResponseDto> {
     const course = await this.findCourseById(id);
+
+    const ability = this.caslAbilityFactory.createForUser(user);
+    ForbiddenError.from(ability).throwUnlessCan(Action.Update, course);
+
     if (!course.isPublished) {
       course.isPublished = true;
       course.updatedAt = new Date();
+      course.updatedBy = user.id;
       const updatedCourse = await this.courseRepository.save(course);
       return plainToInstance(CourseResponseDto, updatedCourse);
     }

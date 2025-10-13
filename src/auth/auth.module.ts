@@ -13,9 +13,7 @@ import jwtConfig from './config/jwt.config';
 import refreshJwtConfig from './config/refresh-jwt.config';
 import { RefreshJwtStrategy } from './strategy/refresh-jwt.strategy';
 import { UsersService } from '../users/users.service';
-import { JwtAuthGuard } from './guard/jwt-auth.guard';
-import { RolesGuard } from './guard/roles.guard';
-import { APP_GUARD } from '@nestjs/core';
+import {CaslModule} from "../casl/casl.module";
 
 @Module({
   imports: [
@@ -25,21 +23,9 @@ import { APP_GUARD } from '@nestjs/core';
     JwtModule.registerAsync(jwtConfig.asProvider()),
     ConfigModule.forFeature(jwtConfig),
     ConfigModule.forFeature(refreshJwtConfig),
+    CaslModule
   ],
   controllers: [AuthController],
-  providers: [
-    AuthService,
-    JwtStrategy,
-    RefreshJwtStrategy,
-    UsersService,
-    {
-      provide: APP_GUARD,
-      useClass: JwtAuthGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
-    },
-  ],
+  providers: [AuthService, JwtStrategy, RefreshJwtStrategy, UsersService],
 })
 export class AuthModule {}
