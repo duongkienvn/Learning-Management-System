@@ -17,6 +17,10 @@ import { PoliciesGuard } from './casl/guard/policies.guard';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env.prod',
+    }),
     AuthModule,
     CoursesModule,
     UsersModule,
@@ -30,14 +34,14 @@ import { PoliciesGuard } from './casl/guard/policies.guard';
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME', 'lms'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: false,
+        ssl: {
+          rejectUnauthorized: false
+        },
       }),
       inject: [ConfigService],
     }),
     LessonsModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
     CacheModule.registerAsync({
       isGlobal: true,
       useFactory: async () => {
