@@ -19,7 +19,7 @@ import { PoliciesGuard } from './casl/guard/policies.guard';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env.prod',
+      envFilePath: '.env',
     }),
     AuthModule,
     CoursesModule,
@@ -32,7 +32,7 @@ import { PoliciesGuard } from './casl/guard/policies.guard';
         port: configService.get<number>('DB_PORT'),
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
-        database: configService.get<string>('DB_NAME', 'lms'),
+        database: configService.get<string>('DB_NAME', 'nestjs-lms'),
         autoLoadEntities: true,
         synchronize: false,
         ssl: {
@@ -46,7 +46,7 @@ import { PoliciesGuard } from './casl/guard/policies.guard';
       isGlobal: true,
       useFactory: async () => {
         return {
-          stores: [new KeyvRedis('redis://localhost:6379')],
+          stores: [new KeyvRedis(process.env.REDIS_URL)],
         };
       },
     }),
